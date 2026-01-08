@@ -23,8 +23,8 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 os.environ["GOOGLE_API_VERSION"] = "v1"
 genai.configure(api_key=API_KEY)
 
-# Tunda 2.0 ne ya yi maka aiki, bari mu bar shi a nan
-MODEL_NAME = 'gemini-2.0-flash-exp' 
+# Gemini Model type
+MODEL_NAME = 'gemini-1.5-flash' 
 model = genai.GenerativeModel(model_name=MODEL_NAME)
 
 app = Flask(__name__)
