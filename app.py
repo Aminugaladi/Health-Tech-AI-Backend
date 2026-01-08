@@ -19,12 +19,17 @@ else:
 # 2. Saita API da Model
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
-
-os.environ["GOOGLE_API_VERSION"] = "v1"
 genai.configure(api_key=API_KEY)
 
-# Gemini Model type
-MODEL_NAME = 'gemini-1.5-flash' 
+# Wannan zai nuna maka jerin dukkan models din da kake da ikon amfani da su a Terminal
+print("--- Jerin Models dake akwai: ---")
+for m in genai.list_models():
+    if 'generateContent' in m.supported_generation_methods:
+        print(m.name)
+print("---------------------------------")
+
+# Gwada amfani da wannan sunan tunda 1.5-flash din ya ki
+MODEL_NAME = 'models/gemini-1.5-flash' 
 model = genai.GenerativeModel(model_name=MODEL_NAME)
 
 app = Flask(__name__)
