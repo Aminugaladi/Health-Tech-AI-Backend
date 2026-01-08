@@ -19,11 +19,10 @@ else:
 # 2. Saita API da Model
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
-
 genai.configure(api_key=API_KEY)
 
-# Muna amfani da gemini-pro saboda shi ne mafi karko a duk versions
-MODEL_NAME = 'gemini-pro' 
+# Muna amfani da wannan sunan tunda shi ne yake a jerin da kake da shi
+MODEL_NAME = 'models/gemini-flash-latest' 
 model = genai.GenerativeModel(model_name=MODEL_NAME)
 
 app = Flask(__name__)
