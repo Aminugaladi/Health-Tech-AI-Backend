@@ -21,8 +21,8 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
 
-# Muna amfani da wannan sunan tunda shi ne yake a jerin da kake da shi
-MODEL_NAME = 'models/gemini-1.5-flash-latest' 
+# MODEL DIN DA YA YI AIKI JIYA
+MODEL_NAME = 'models/gemini-flash-latest' 
 model = genai.GenerativeModel(model_name=MODEL_NAME)
 
 app = Flask(__name__)
@@ -78,7 +78,7 @@ def home():
             <div class="logo-box"><div class="cross-v"></div><div class="cross-h"></div></div>
             <h2>LafiyaAI</h2>
             <p class="subtitle">Abokin Tattaunawar Lafiyarka ta AI</p>
-            <form action="/diagnose" method="post">
+            <form action="/diagnose" method="post" enctype="multipart/form-data">
                 <div class="input-group">
                     <input type="text" name="description" placeholder="Bayyana yadda kake ji..." required>
                 </div>
@@ -101,7 +101,8 @@ def diagnose():
         if request.is_json:
             is_json = True
             data = request.get_json()
-            user_text = data.get('description', '')
+            # Gyara: muna karbar duka sunayen biyu
+            user_text = data.get('description') or data.get('message') or ""
             file_b64 = data.get('file_data')
             file_type = data.get('file_type')
 
@@ -114,14 +115,14 @@ def diagnose():
         
         # 2. KARBAR BAYANI DAGA WEB BROWSER (Form)
         else:
-            user_text = request.form.get('description', '')
+            user_text = request.form.get('description') or request.form.get('message') or ""
             file = request.files.get('image')
             if file and file.filename != '':
                 user_file = Image.open(io.BytesIO(file.read()))
                 file_type = 'image'
 
         if not user_text and not user_file:
-            return jsonify({"error": "Babu bayani"}), 400
+            return jsonify({"result": "Babu bayani"}), 400
 
         # 3. AIKIN GEMINI
         contents = [SYSTEM_PROMPT]
@@ -135,7 +136,6 @@ def diagnose():
         if is_json:
             return jsonify({"result": ai_message})
         else:
-            # Gyara rubutu don JavaScript ya iya karanta shi ba tare da kuskure ba
             safe_message = ai_message.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
             return f'''
             <!DOCTYPE html>
@@ -146,22 +146,17 @@ def diagnose():
                 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
                 <style>
                     body {{ font-family: 'Segoe UI', sans-serif; background: #f0fdfa; margin:0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }}
-                    .container {{ background: white; padding: 30px; border-radius: 25px; box-shadow: 0 15px 40px rgba(0,128,128,0.15); max-width: 700px; width: 95%; }}
+                    .container {{ background: white; padding: 30px; border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); max-width: 700px; width: 95%; }}
                     h3 {{ color: #008080; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }}
                     #result {{ line-height: 1.6; color: #333; font-size: 16px; text-align: left; }}
-                    #result h1, #result h2, #result h3 {{ color: #004d40; margin-top: 20px; }}
-                    #result ul, #result ol {{ padding-left: 20px; }}
-                    #result li {{ margin-bottom: 8px; }}
-                    .btn-back {{ text-align: center; margin-top: 30px; }}
-                    .btn-back a {{ text-decoration: none; background: #008080; color: white; padding: 12px 25px; border-radius: 10px; font-weight: bold; }}
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h3>Sakamakon Bincike:</h3>
                     <div id="result"></div>
-                    <div class="btn-back">
-                        <a href="/">Koma Baya</a>
+                    <div class="btn-back" style="text-align: center; margin-top: 20px;">
+                        <a href="/" style="text-decoration: none; background: #008080; color: white; padding: 10px 20px; border-radius: 10px;">Koma Baya</a>
                     </div>
                 </div>
                 <script>
@@ -174,7 +169,7 @@ def diagnose():
         
     except Exception as e:
         print(f"ERROR: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"result": f"Kuskure: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
