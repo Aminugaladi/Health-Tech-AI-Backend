@@ -131,22 +131,49 @@ def diagnose():
         response = model.generate_content(contents)
         ai_message = response.text
 
-        # 4. MAYAR DA AMSA (JSON ga Mobile, HTML ga Web)
+        # 4. MAYAR DA AMSA (JSON ga Mobile, HTML ga Web mai fassarar Markdown)
         if is_json:
             return jsonify({"result": ai_message})
         else:
             return f'''
-            <body style="font-family: sans-serif; background: #f0fdfa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin:0;">
-                <div style="background: white; padding: 40px; border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); max-width: 600px; width: 90%;">
-                    <h3 style="color: #008080; border-bottom: 2px solid #eee; padding-bottom: 15px;">Sakamakon Bincike:</h3>
-                    <p style="line-height: 1.8; color: #333; font-size: 17px;">{ai_message.replace(chr(10), '<br>')}</p>
-                    <div style="text-align: center; margin-top: 30px;">
-                        <a href="/" style="text-decoration: none; background: #008080; color: white; padding: 12px 25px; border-radius: 10px; font-weight: bold;">Koma Baya</a>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+                <style>
+                    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0fdfa; margin:0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }}
+                    .container {{ background: white; padding: 30px; border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); max-width: 700px; width: 95%; }}
+                    h3 {{ color: #008080; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }}
+                    #result {{ line-height: 1.6; color: #333; font-size: 16px; text-align: left; }}
+                    /* Gyaran salon Markdown a cikin HTML */
+                    #result h1, #result h2, #result h3 {{ color: #004d40; margin-top: 20px; }}
+                    #result ul, #result ol {{ padding-left: 20px; }}
+                    #result li {{ margin-bottom: 8px; }}
+                    .btn-back {{ text-align: center; margin-top: 30px; }}
+                    .btn-back a {{ text-decoration: none; background: #008080; color: white; padding: 12px 25px; border-radius: 10px; font-weight: bold; transition: 0.3s; }}
+                    .btn-back a:hover {{ background: #004d40; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h3>Sakamakon Bincike:</h3>
+                    <div id="result"></div>
+                    <div class="btn-back">
+                        <a href="/">Koma Baya</a>
                     </div>
                 </div>
-            </body>
-            '''
 
+                <script>
+                    // Wannan script din zai karbi rubutun AI ya mayar da shi HTML mai kyau
+                    const rawMessage = `{ai_message.replace('`', '\\`').replace('$', '\\$')}`;
+                    document.getElementById('result').innerHTML = marked.parse(rawMessage);
+                </script>
+            </body>
+            </html>
+            '''
+        
     except Exception as e:
         print(f"ERROR: {str(e)}")
         return jsonify({"error": str(e)}), 500
