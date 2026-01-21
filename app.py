@@ -8,7 +8,7 @@ from PIL import Image
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# 1. Magance Matsalar SSL
+# SSL
 try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
@@ -16,19 +16,30 @@ except AttributeError:
 else:
     ssl._create_default_https_context = _create_unverified_https_context
 
-# 2. Saita API da Model
+# Saita API da Model
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
 
-# MODEL DIN DA YA YI AIKI JIYA
-MODEL_NAME = 'models/gemini-flash-latest' 
+# MODEL DIN DA YA YI AIKI
+MODEL_NAME = 'gemini-flash-latest' 
 model = genai.GenerativeModel(model_name=MODEL_NAME)
 
 app = Flask(__name__)
 CORS(app)
 
-SYSTEM_PROMPT = "Sunanka LafiyaAI. Kai kwararren likitan AI ne. Yi magana da Hausa kawai cikin girmamawa da lallashi."
+# SYSTEM PROMPT
+SYSTEM_PROMPT = """Sunanka LafiyaAI. Kai kwararren likitan AI ne mai ilimin gaggawa da binciken lafiya.
+Aikin ka shi ne taimaka wa mai amfani fahimtar yanayin lafiyarsa cikin harshen Hausa na Najeriya mai sauki.
+
+DOKOKIN KA:
+1. Idan aka turo hoto kawai (kamar ciwon fata ko sakamakon gwaji), bincika hoton nan take ka fadi abin da ka gani da shawarar abin da za a yi.
+2. Idan murya (audio) aka turo, saurara ka ba da amsa kai tsaye.
+3. Kada ka cika yawan tambayoyi; ba da mafita ko bayani kan abin da aka turo maka nan take.
+4. Yi magana cikin ladabi, tausayi, da girmamawa.
+5. Idan yanayin gaggawa ne, bada matakan farko (First Aid) sannan ka bukaci su ga likita.
+6. Yi amfani da '#' don manyan jigogi da '*' don lissafa abubuwa don rubutun ya fito fili.
+7. Ka kasance mai ba da kwarin gwiwa, amma koda yaushe ka tuna musu tuntuibar likita a karshen magana."""
 
 @app.route('/')
 def home():
@@ -94,14 +105,12 @@ def diagnose():
     try:
         user_text = ""
         user_file = None
-        file_type = None
         is_json = False
 
-        # 1. KARBAR BAYANI DAGA MOBILE APP (JSON)
+        # KARBAR BAYANI DAGA MOBILE APP (JSON)
         if request.is_json:
             is_json = True
             data = request.get_json()
-            # Gyara: muna karbar duka sunayen biyu
             user_text = data.get('description') or data.get('message') or ""
             file_b64 = data.get('file_data')
             file_type = data.get('file_type')
@@ -111,28 +120,36 @@ def diagnose():
                     img_data = base64.b64decode(file_b64)
                     user_file = Image.open(io.BytesIO(img_data))
                 elif file_type == 'audio':
-                    user_file = {"mime_type": "audio/m4a", "data": file_b64}
+                    # Don murya: Gemini yana karbar data a matsayin dictionary
+                    user_file = {"mime_type": "audio/mp4", "data": file_b64}
         
-        # 2. KARBAR BAYANI DAGA WEB BROWSER (Form)
+        # KARBAR BAYANI DAGA WEB BROWSER (Form)
         else:
             user_text = request.form.get('description') or request.form.get('message') or ""
             file = request.files.get('image')
             if file and file.filename != '':
                 user_file = Image.open(io.BytesIO(file.read()))
-                file_type = 'image'
 
+        # Tabbatar da an turo akalla abu daya (rubutu, hoto, ko murya)
         if not user_text and not user_file:
-            return jsonify({"result": "Babu bayani"}), 400
+            return jsonify({"result": "Don Allah shigar da bayani, hoto, ko murya don bincike."}), 400
 
-        # 3. AIKIN GEMINI
+        # AIKIN GEMINI (Multi-modal handling)
         contents = [SYSTEM_PROMPT]
-        if user_text: contents.append(f"Korafi: {user_text}")
-        if user_file: contents.append(user_file)
+        
+        if user_file:
+            contents.append(user_file)
+            
+        if user_text:
+            contents.append(f"Bayani/Tambaya: {user_text}")
+        elif user_file and not user_text:
+            # Idan hoto ne kawai ko murya ba tare da rubutu ba
+            contents.append("Yi bincike akan wannan fayil din da aka turo maka ka ba da bayani cikakke.")
 
         response = model.generate_content(contents)
         ai_message = response.text
 
-        # 4. MAYAR DA AMSA
+        # MAYAR DA AMSA
         if is_json:
             return jsonify({"result": ai_message})
         else:
@@ -169,7 +186,7 @@ def diagnose():
         
     except Exception as e:
         print(f"ERROR: {str(e)}")
-        return jsonify({"result": f"Kuskure: {str(e)}"}), 500
+        return jsonify({"result": f"An samu kuskure: {str(e)}"}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
