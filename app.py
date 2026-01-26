@@ -8,7 +8,7 @@ from PIL import Image
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# SSL
+# SSL Settings
 try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
@@ -28,18 +28,20 @@ model = genai.GenerativeModel(model_name=MODEL_NAME)
 app = Flask(__name__)
 CORS(app)
 
-# SYSTEM PROMPT
-SYSTEM_PROMPT = """Sunanka LafiyaAI. Kai kwararren likitan AI ne mai ilimin gaggawa da binciken lafiya.
+# SYSTEM PROMPT - AN GYARA DON KAYATARWA BA TARE DA MARKDOWN BA
+SYSTEM_PROMPT = """LafiyaAI. Kai kwararren likitan AI ne mai ilimin gaggawa da binciken lafiya.
 Aikin ka shi ne taimaka wa mai amfani fahimtar yanayin lafiyarsa cikin harshen Hausa na Najeriya mai sauki.
 
-DOKOKIN KA:
-1. Idan aka turo hoto kawai (kamar ciwon fata ko sakamakon gwaji), bincika hoton nan take ka fadi abin da ka gani da shawarar abin da za a yi.
-2. Idan murya (audio) aka turo, saurara ka ba da amsa kai tsaye.
-3. Kada ka cika yawan tambayoyi; ba da mafita ko bayani kan abin da aka turo maka nan take.
-4. Yi magana cikin ladabi, tausayi, da girmamawa.
-5. Idan yanayin gaggawa ne, bada matakan farko (First Aid) sannan ka bukaci su ga likita.
-6. Yi amfani da '#' don manyan jigogi da '*' don lissafa abubuwa don rubutun ya fito fili.
-7. Ka kasance mai ba da kwarin gwiwa, amma koda yaushe ka tuna musu tuntuibar likita a karshen magana."""
+DOKOKIN KA (TSARIN RUBUTU):
+1. KADA KA YI AMFANI DA MARKDOWN (kamar ##, **, __). 
+2. Maimakon ##, yi amfani da Emojis kamar 🏥, 🩺, 🧪 ko 💊 don manyan jigogi.
+3. Maimakon **, yi amfani da manyan haruffa (CAPITAL LETTERS) don nuna muhimmanci.
+4. Yi amfani da dash (-) ko digobi (•) don lissafa abubuwa.
+5. Idan aka turo hoto kawai, bincika hoton nan take ka fadi abin da ka gani da shawarar abin da za a yi.
+6. Idan murya (audio) aka turo, saurara ka ba da amsa kai tsaye.
+7. Kada ka cika yawan tambayoyi; ba da mafita nan take cikin ladabi da girmamawa.
+8. Idan yanayin gaggawa ne, bada matakan farko (First Aid) sannan ka bukaci su ga likita da gaggawa.
+9. Koda yaushe tuna musu tuntuibar likita a karshen magana. ✅"""
 
 @app.route('/')
 def home():
@@ -120,7 +122,7 @@ def diagnose():
                     img_data = base64.b64decode(file_b64)
                     user_file = Image.open(io.BytesIO(img_data))
                 elif file_type == 'audio':
-                    # Don murya: Gemini yana karbar data a matsayin dictionary
+                    # Don murya
                     user_file = {"mime_type": "audio/mp4", "data": file_b64}
         
         # KARBAR BAYANI DAGA WEB BROWSER (Form)
@@ -130,21 +132,21 @@ def diagnose():
             if file and file.filename != '':
                 user_file = Image.open(io.BytesIO(file.read()))
 
-        # Tabbatar da an turo akalla abu daya (rubutu, hoto, ko murya)
+        # Tabbatar da an turo akalla abu daya
         if not user_text and not user_file:
-            return jsonify({"result": "Don Allah shigar da bayani, hoto, ko murya don bincike."}), 400
+            return jsonify({"result": "Don Allah shigar da bayani, hoto, ko murya don bincike. ⚠️"}), 400
 
-        # AIKIN GEMINI (Multi-modal handling)
+        # AIKIN GEMINI
         contents = [SYSTEM_PROMPT]
         
         if user_file:
             contents.append(user_file)
             
         if user_text:
-            contents.append(f"Bayani/Tambaya: {user_text}")
+            contents.append(f"Bayani/Tambaya daga mai amfani: {user_text}")
         elif user_file and not user_text:
-            # Idan hoto ne kawai ko murya ba tare da rubutu ba
-            contents.append("Yi bincike akan wannan fayil din da aka turo maka ka ba da bayani cikakke.")
+            # Idan hoto ne kawai ba tare da rubutu ba
+            contents.append("MAI AMFANI YA TURO WANNAN FAYIL DIN KAWAI. Duba shi daki-daki ka ba da bayani cikin Hausa.")
 
         response = model.generate_content(contents)
         ai_message = response.text
@@ -160,26 +162,21 @@ def diagnose():
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
                 <style>
                     body {{ font-family: 'Segoe UI', sans-serif; background: #f0fdfa; margin:0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }}
                     .container {{ background: white; padding: 30px; border-radius: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); max-width: 700px; width: 95%; }}
                     h3 {{ color: #008080; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }}
-                    #result {{ line-height: 1.6; color: #333; font-size: 16px; text-align: left; }}
+                    #result {{ line-height: 1.6; color: #333; font-size: 16px; text-align: left; white-space: pre-wrap; }}
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h3>Sakamakon Bincike:</h3>
-                    <div id="result"></div>
+                    <div id="result">{ai_message}</div>
                     <div class="btn-back" style="text-align: center; margin-top: 20px;">
                         <a href="/" style="text-decoration: none; background: #008080; color: white; padding: 10px 20px; border-radius: 10px;">Koma Baya</a>
                     </div>
                 </div>
-                <script>
-                    const rawMessage = `{safe_message}`;
-                    document.getElementById('result').innerHTML = marked.parse(rawMessage);
-                </script>
             </body>
             </html>
             '''
